@@ -15,8 +15,8 @@ class SginGPTCrew:
   agents: List[BaseAgent]
   tasks: List[Task]
 
-  def __init__(self, asl_dataset):
-    self.ASL_dataset = asl_dataset
+  # def __init__(self, asl_dataset):
+  #   self.ASL_dataset = asl_dataset
 
   @agent
   def sentence_finisher_agent(self):
@@ -51,7 +51,7 @@ class SginGPTCrew:
     return Task(
         config=self.tasks_config['finish_sentence_task'],
         verbose=True,
-        ASL_dataset=self.ASL_dataset,
+        # ASL_dataset=self.ASL_dataset,
     )
 
   @task
@@ -60,7 +60,7 @@ class SginGPTCrew:
     return Task(
         config=self.tasks_config['chat_task'],
         verbose=True,
-        ASL_dataset=self.ASL_dataset,
+        # ASL_dataset=self.ASL_dataset,
     )
 
   @task
@@ -69,7 +69,7 @@ class SginGPTCrew:
     return Task(
         config=self.tasks_config['sentence_split_task'],
         verbose=True,
-        ASL_dataset=self.ASL_dataset,
+        # ASL_dataset=self.ASL_dataset,
     )
 
   @task
@@ -78,7 +78,7 @@ class SginGPTCrew:
     return Task(
         config=self.tasks_config['rearrange_word_task'],
         verbose=True,
-        ASL_dataset=self.ASL_dataset,
+        # ASL_dataset=self.ASL_dataset,
     )
 
   @crew
@@ -98,7 +98,7 @@ class SginGPTCrew:
     # Wire explicit context chaining: t1 -> t2 -> t3 -> t4
     t2.context = [t1]
     t3.context = [t2]
-    # t4.context = [t3]
+    t4.context = [t3]
 
     return Crew(
         agents=[finisher, chatter, splitter],

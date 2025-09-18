@@ -1,21 +1,27 @@
 from crew import SginGPTCrew
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 def main():
-  asl_dataset = "data/asl_dataset"
-  words = ["YOU", "DO", "WHAT", "AND", "YOU", "NAME", "WHAT"]
+
+  with open("./data/english_words.json", "r") as f:
+    asl_dataset = json.load(f)
+
+  asl_dataset = [asl_dataset[word].upper() for word in asl_dataset]
+
+  words = ["YOU", "NAME", "WHAT", "YOU", "DO", "WHAT"]
 
   if not os.getenv("OPENAI_API_KEY"):
     raise SystemExit(
         "Missing OPENAI_API_KEY. Set it in your environment or a .env file at repo root."
     )
 
-  result = SginGPTCrew(
-      asl_dataset=asl_dataset).sgin_gpt_crew().kickoff(inputs={'words': words, 'ASL_dataset': asl_dataset})
+  result = SginGPTCrew().sgin_gpt_crew().kickoff(
+      inputs={'words': words, 'ASL_dataset': asl_dataset})
   # Print final output
   print("Crew Result:", result)
 
