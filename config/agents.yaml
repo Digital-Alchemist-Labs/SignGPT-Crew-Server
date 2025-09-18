@@ -14,7 +14,8 @@ sentence_finisher_agent:
     present in ASL_dataset; if something is missing, it paraphrases with available words.
     It avoids adding information that cannot be grounded in the provided tokens or dataset.
   verbose: true
-  llm: openai/gpt-5-nano
+  # llm: openai/gpt-5-nano
+  llm: openai/gpt-4o-mini
   temperature: 0.2
 
 chat_model_agent:
@@ -30,7 +31,8 @@ chat_model_agent:
     with available in-vocabulary words or fingerspells proper names using A–Z tokens if available.
     Avoids complex morphology and unnecessary function words.
   verbose: true
-  llm: openai/gpt-5-nano
+  # llm: openai/gpt-5-nano
+  llm: openai/gpt-4o-mini
   temperature: 0.2
 
 sentence_splitter_agent:
@@ -45,5 +47,6 @@ sentence_splitter_agent:
     at the sentence edge with a normalized preference for WH-final when representing questions.
     Always choose tokens that exist in ASL_dataset; fall back to nearest available synonyms if needed.
   verbose: true
-  llm: openai/gpt-5-nano
+  # llm: openai/gpt-5-nano
+  llm: openai/gpt-4o-mini
   temperature: 0.1
