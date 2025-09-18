@@ -1,0 +1,96 @@
+# tasks.yaml (updated)
+
+finish_sentence_task:
+  description: >
+    INPUT: A JSON array of ASL tokens recognized by the model (WLASL style), e.g. ["TOMORROW","SCHOOL","GO","I"]. 
+    CONTEXT: {ASL_dataset} (a mapping of known words).
+    ACTION: Produce one fluent English sentence that best matches the tokens' meaning.
+    RULES:
+      - Respect typical ASL ordering (TIME → TOPIC → COMMENT) when interpreting intent.
+      - Infer minimal tense/aspect from TIME words (e.g., TOMORROW → future phrasing).
+      - Do NOT invent entities not present in the tokens unless required function words for English.
+      - Prefer vocabulary present in ASL_dataset; if a concept is missing, paraphrase simply.
+      - Output must be a single line string (no quotes, no JSON).
+    INPUT FORMAT:
+      - tokens: list[str]
+      - optional: user_context (short text), asl_dataset (dict or path)
+
+    USER INPUT : {words}
+
+  expected_output: >
+    A single grammatical English sentence (string), e.g., "I will go to school tomorrow."
+  agent: sentence_finisher_agent
+
+chat_task:
+  description: >
+    PURPOSE:
+      Answer the question with a short, signable English reply that can be cleanly converted back to ASL tokens.
+
+    INPUT:
+      - message: str                  # User question or the finished sentence from finish_sentence_task
+      - asl_dataset: {ASL_dataset}     # Vocabulary map (id -> word surface form)
+      - optional: conversation_history: list[str]
+
+    ACTION:
+      - Answer ONLY; do not ask a follow-up question.
+      - Use ONLY words that exist in asl_dataset.
+      - If a needed function word (e.g., articles, 'to', auxiliary 'be/will/do') is NOT in asl_dataset,
+        omit it rather than inventing a new word.
+      - If a concept word is missing, rephrase using in-vocabulary synonyms or simple VERB+NOUN periphrasis
+        (e.g., "HELP PERSON" instead of "helper"); allow A–Z fingerspelling for proper names if available.
+      - Keep it simple so the sentence_splitter_agent can reliably convert it back to ASL order.
+
+    RULES:
+      - Max 1 short sentence, ≤ 12 words.
+      - Plain text only (no code blocks, no metadata, no emojis).
+      - Prefer straightforward syntax; avoid idioms and complex clauses.
+      - Punctuation limited to period or question mark.
+
+    OUTPUT:
+      - One plain-text reply composed exclusively of asl_dataset tokens (after normalization),
+        with any missing function words omitted.
+
+  expected_output: >
+    One short answer sentence (≤12 words) composed only of words in asl_dataset (or A–Z fingerspelling for proper names),
+    suitable for ASL tokenization and re-ordering.
+
+  agent: chat_model_agent
+
+sentence_split_task:
+  description: >
+    INPUT: An English sentence to convert into an ASL-style token sequence.
+    CONTEXT: ASL_dataset (available tokens).
+    ACTION: Convert English to ASL-order tokens following:
+      - Move TIME to the beginning (e.g., TODAY, TOMORROW, YESTERDAY, NOW, LATER).
+      - Use TOPIC → COMMENT structure (e.g., "I will go to the store." → TOMORROW STORE GO I).
+      - Drop articles (a/an/the) and most prepositions if not required by available tokens.
+      - Minimize "BE" (am/is/are) when it is just a copula.
+      - Place WH-words at the edge (WHERE/WHAT/WHO/WHY/WHEN/HOW), with normalized WH-final for questions
+        (e.g., "What is your name?" → ["YOUR","NAME","WHAT"]).
+      - **Preserve all single-character A–Z alphabet tokens (e.g., G, P, T) even if not in ASL_dataset.**
+      - Prefer tokens that exist in ASL_dataset; if exact word missing, choose nearest available synonym.
+
+    OUTPUT FORMAT:
+      - A JSON array of tokens in order, e.g. ["TOMORROW","SCHOOL","GO","I"].
+
+  expected_output: >
+    A JSON array of ASL-order tokens where single-character A–Z alphabet tokens are preserved.
+  agent: sentence_splitter_agent
+
+rearrange_word_task:
+  description: >
+    INPUT: An unordered or English-order list of tokens (e.g., ["I","GO","STORE","YESTERDAY"]).
+    CONTEXT: ASL_dataset (available tokens).
+    ACTION: Re-order tokens to ASL grammar:
+      - TIME first; then TOPIC; then COMMENT (verb phrase + optional pronoun).
+      - Drop function words not in ASL_dataset (articles; some prepositions).
+      - **Do NOT drop single-character A–Z alphabet tokens (e.g., G, P, T).**
+      - For negatives, place NOT before or after the verb (COFFEE LIKE NOT I).
+      - For questions, move WH to edge; yes/no remains linear (non-manual signals not represented).
+
+    OUTPUT FORMAT:
+      - A JSON array of tokens in ASL order, preserving single-character alphabet tokens.
+
+  expected_output: >
+    A JSON array reordered to ASL grammar (e.g., ["YESTERDAY","STORE","GO","I"]) and preserving alphabet tokens like ["NAME","SIGN","G","P","T"].
+  agent: sentence_splitter_agent
