@@ -47,62 +47,32 @@ chat_task:
 
 sentence_split_task:
   description: >
-    You are an English-to-ASL sequence converter. Convert English sentences to ASL token sequences using ONLY the provided ASL_dataset vocabulary.
+    You are an English-to-ASL converter. Convert the input English sentence to a single ASL token sequence using ONLY the provided ASL_dataset vocabulary.
 
-    ASL_dataset: {ASL_dataset}
+    ASL_dataset: {ASL_dataset} (available tokens).
 
-    CONVERSION RULES (apply in this order):
+    RULES (apply sequentially):
 
-    STEP 1 - TOKENIZATION:
-    - Split sentence into individual words
-    - Remove punctuation
-    - Convert to uppercase
-    - Keep single letters A-Z as-is
-
-    STEP 2 - VOCABULARY MAPPING:
-    - If word exists in ASL_dataset → use it directly
-    - If word NOT in ASL_dataset → find closest synonym:
-      * "assist/help/aid" → "HELP"
-      * "question/questions/ask" → "QUESTION" 
-      * "student/students/pupil" → "STUDENT"
-      * "teacher/instructor" → "TEACHER"
-      * "person/people/individuals" → "PEOPLE"
-    - Remove function words: a, an, the, is, am, are, was, were, will, do, does, in, on, at, with, by, for
-    - If no synonym exists → OMIT the word
-
-    STEP 3 - ASL WORD ORDER:
-    - TIME words first (if present): TODAY, TOMORROW, YESTERDAY, NOW, LATER
-    - TOPIC-COMMENT structure: [TOPIC] [COMMENT]
-    - WH-questions: move WH-word to END
-      * "What is your name?" → "YOUR NAME WHAT"
-      * "Where do you live?" → "YOU LIVE WHERE"
+    1. TOKENIZE: Split into words, remove punctuation, uppercase
+    2. MAP VOCABULARY: 
+      - Use exact ASL_dataset match if exists
+      - Map common synonyms:
+        * help/aid/assist → HELP
+        * question/ask → QUESTION  
+        * student/pupil → STUDENT
+        * teacher/instructor → TEACHER
+      - Remove: a, an, the, is, am, are, was, were, will, do, does, have, has
+      - Keep: I, YOU, ME, MY, YOUR, WE, THEY
+      - Omit unmappable words
+    3. REORDER:
+      - Time words first: TODAY, TOMORROW, YESTERDAY, NOW
+      - For statements: SUBJECT + OBJECT + VERB
+      - For WH-questions: SUBJECT + OBJECT + WH-WORD
 
     EXAMPLES:
-    Input: "I will help the students with questions"
-    Step 1: ["I", "WILL", "HELP", "THE", "STUDENTS", "WITH", "QUESTIONS"]
-    Step 2: ["I", "HELP", "STUDENT", "QUESTION"] (removed: will, the, with)
-    Step 3: ["I", "STUDENT", "QUESTION", "HELP"] (topic-comment)
-    Output: ["I", "STUDENT", "QUESTION", "HELP"]
-
-    Input: "What is your name?"
-    Step 1: ["WHAT", "IS", "YOUR", "NAME"]
-    Step 2: ["WHAT", "YOUR", "NAME"] (removed: is)
-    Step 3: ["YOUR", "NAME", "WHAT"] (WH-word to end)
-    Output: ["YOUR", "NAME", "WHAT"]
-
-    Input: "Tomorrow I will go to school"
-    Step 1: ["TOMORROW", "I", "WILL", "GO", "TO", "SCHOOL"]
-    Step 2: ["TOMORROW", "I", "GO", "SCHOOL"] (removed: will, to)
-    Step 3: ["TOMORROW", "I", "SCHOOL", "GO"] (time first, topic-comment)
-    Output: ["TOMORROW", "I", "SCHOOL", "GO"]
-
-    CRITICAL REQUIREMENTS:
-    - Output ONLY valid ASL_dataset tokens or single letters A-Z
-    - NO fabricated or invented tokens
-    - Return as JSON array format: ["TOKEN1", "TOKEN2", "TOKEN3"]
-    - If input contains unprocessable words, omit them completely
-
-    Now convert this English sentence to ASL sequence:
+    "I help students" → ["I", "STUDENT", "HELP"]
+    "What is your name?" → ["YOUR", "NAME", "WHAT"] 
+    "Tomorrow I go school" → ["TOMORROW", "I", "SCHOOL", "GO"]
 
   expected_output: >
     Either (a) an array of arrays, one token array per sentence, in original sentence order;
