@@ -46,8 +46,30 @@ class ProcessTokensRequest(BaseModel):
     )
 
 
+class ChatRequest(BaseModel):
+    message: str = Field(
+        ...,
+        description="Direct message/question for the chat model agent",
+        example="What is your name?"
+    )
+
+
 class ProcessTokensResponse(BaseModel):
-    result: str = Field(description="Final processed result")
+    content: str = Field(description="Final processed result")
+    output_history: List[Dict[str, Any]] = Field(
+        description="History of outputs from each task")
+
+
+class ChatOnlyResponse(BaseModel):
+    content: str = Field(description="Chat model agent response")
+    output_history: List[Dict[str, Any]] = Field(
+        description="History of outputs up to chat task")
+
+
+class ChatAgentResponse(BaseModel):
+    content: str = Field(description="Direct chat model agent response")
+    agent_info: Dict[str, str] = Field(
+        description="Information about the chat agent")
 
 
 class HealthResponse(BaseModel):
@@ -117,17 +139,167 @@ async def process_tokens(request: ProcessTokensRequest):
 
         # Process tokens through the crew
         crew_instance = get_crew_instance()
-        result = crew_instance.sgin_gpt_crew().kickoff(
+        crew = crew_instance.sgin_gpt_crew()
+        result = crew.kickoff(
             inputs={'words': request.words, 'ASL_dataset': asl_dataset}
         )
 
-        # Return only the result
-        return ProcessTokensResponse(result=str(result))
+        # Extract output history from tasks
+        output_history = []
+        for i, task in enumerate(crew.tasks):
+            if hasattr(task, 'output') and task.output:
+                output_history.append({
+                    'task_index': i,
+                    'task_description': task.description[:100] + '...' if len(task.description) > 100 else task.description,
+                    'agent_role': task.agent.role if task.agent else 'Unknown',
+                    'output': str(task.output)
+                })
+
+        # Return result with history
+        return ProcessTokensResponse(
+            content=str(result),
+            output_history=output_history
+        )
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Error processing tokens: {str(e)}"
+        ) from e
+
+
+@app.post("/process-tokens-chat-only", response_model=ChatOnlyResponse)
+async def process_tokens_chat_only(request: ProcessTokensRequest):
+    """
+    Process ASL tokens through only the first two agents (sentence finisher and chat model)
+
+    This endpoint takes a list of ASL tokens and processes them through:
+    1. Sentence finisher agent - converts tokens to natural English
+    2. Chat model agent - generates conversational response
+
+    Returns the chat model response and output history of both tasks.
+    """
+    try:
+        # Validate OpenAI API key
+        if not os.getenv("OPENAI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="OPENAI_API_KEY not configured. Please set it in your environment or .env file."
+            )
+
+        # Validate input
+        if not request.words:
+            raise HTTPException(
+                status_code=400,
+                detail="Words list cannot be empty"
+            )
+
+        # Create crew instance and get individual agents/tasks
+        crew_instance = get_crew_instance()
+
+        # Get agents
+        finisher = crew_instance.sentence_finisher_agent()
+        chatter = crew_instance.chat_model_agent()
+
+        # Get tasks
+        t1 = crew_instance.finish_sentence_task()
+        t2 = crew_instance.chat_task()
+
+        # Set up context chaining: t1 -> t2
+        t2.context = [t1]
+
+        # Create a crew with only first two tasks
+        from crewai import Crew
+        chat_only_crew = Crew(
+            agents=[finisher, chatter],
+            tasks=[t1, t2],
+            verbose=True,
+        )
+
+        # Execute the crew
+        result = chat_only_crew.kickoff(
+            inputs={'words': request.words, 'ASL_dataset': asl_dataset}
+        )
+
+        # Extract output history from tasks
+        output_history = []
+        for i, task in enumerate(chat_only_crew.tasks):
+            if hasattr(task, 'output') and task.output:
+                output_history.append({
+                    'task_index': i,
+                    'task_description': task.description[:100] + '...' if len(task.description) > 100 else task.description,
+                    'agent_role': task.agent.role if task.agent else 'Unknown',
+                    'output': str(task.output)
+                })
+
+        # Return chat model result with history
+        return ChatOnlyResponse(
+            content=str(result),
+            output_history=output_history
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing tokens (chat only): {str(e)}"
+        ) from e
+
+
+@app.post("/chat", response_model=ChatAgentResponse)
+async def chat_with_agent(request: ChatRequest):
+    """
+    Direct chat with the chat model agent only
+
+    This endpoint bypasses all other agents and directly sends the message
+    to the chat model agent for a conversational response.
+    """
+    try:
+        # Validate OpenAI API key
+        if not os.getenv("OPENAI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="OPENAI_API_KEY not configured. Please set it in your environment or .env file."
+            )
+
+        # Validate input
+        if not request.message.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Message cannot be empty"
+            )
+
+        # Create crew instance and get chat agent only
+        crew_instance = get_crew_instance()
+        chat_agent = crew_instance.chat_model_agent()
+        chat_task = crew_instance.chat_task()
+
+        # Create a crew with only the chat agent and task
+        from crewai import Crew
+        chat_crew = Crew(
+            agents=[chat_agent],
+            tasks=[chat_task],
+            verbose=True,
+        )
+
+        # Execute the crew with direct message input
+        result = chat_crew.kickoff(
+            inputs={'message': request.message, 'ASL_dataset': asl_dataset}
+        )
+
+        # Return direct chat response
+        return ChatAgentResponse(
+            content=str(result),
+            agent_info={
+                'agent_role': chat_agent.role,
+                'agent_goal': chat_agent.goal,
+                'model': 'gpt-4o-mini'
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error in chat: {str(e)}"
         ) from e
 
 
