@@ -3495,15 +3495,21 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "crewai", extra = ["tools"] },
+    { name = "fastapi" },
     { name = "playwright" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "crewai", extras = ["tools"], specifier = ">=0.152.0" },
+    { name = "fastapi", specifier = ">=0.116.2" },
     { name = "playwright", specifier = ">=1.55.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
+    { name = "uvicorn", specifier = ">=0.32.0" },
 ]
 
 [[package]]
