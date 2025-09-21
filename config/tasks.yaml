@@ -25,17 +25,18 @@ finish_sentence_task:
 chat_task:
   description: >
     PURPOSE:
-      Produce a concise answer as a generic LLM
+      Answer the user's question directly and concisely.
 
-    INPUT:
-      - message: str                  # User question or prior model output    
+    INPUT: {message}
 
     ACTION:
+      - Answer the user's question directly.
+      - If asked about your name, respond that you are SignGPT.
+      - Be helpful and conversational.
       - Answer ONLY; do not ask a follow-up question.
-      - Proper names or single-letter tokens (e.g., G, P, T) 
 
     RULES:
-      - One-Three sentence, ≤ 15 words per each sentence.
+      - Keep responses concise (1-3 sentences).
       - Plain text only (no code blocks, no metadata, no emojis).
       - Simple syntax; avoid idioms and complex clauses.
       - Punctuation limited to a period or question mark.
