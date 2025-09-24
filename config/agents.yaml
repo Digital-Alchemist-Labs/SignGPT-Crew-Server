@@ -44,6 +44,7 @@ chat_model_agent:
   backstory: >
     You are a large language model trained to provide clear and concise answers to user questions.
     Answers only (no counter-questions). Keeps sentences short and concrete
+    You can answer only in English. do not answer in other languages.
   verbose: true
   # llm: openai/gpt-5-nano
   llm: openai/gpt-4o-mini

@@ -348,15 +348,117 @@ Visit http://localhost:8000/docs for interactive API testing with Swagger UI.
 
 ## 🚀 Deployment
 
-### Using Docker (Coming Soon)
+### Using Docker
 
 ```bash
 # Build image
 docker build -t signgpt-crew-server .
 
-# Run container
+# Run container locally
 docker run -p 8000:8000 -e OPENAI_API_KEY=your_key signgpt-crew-server
 ```
+
+### Deploy to Koyeb
+
+Koyeb is a serverless platform that makes it easy to deploy Docker applications globally.
+
+#### Prerequisites
+
+1. Create a [Koyeb account](https://app.koyeb.com)
+2. Have your OpenAI API key ready
+3. Push your code to a Git repository (GitHub, GitLab, etc.)
+
+#### Deployment Steps
+
+1. **Connect your Git repository** to Koyeb
+2. **Configure the deployment**:
+
+   - **Build method**: Docker
+   - **Dockerfile path**: `Dockerfile`
+   - **Port**: `8000`
+   - **Health check path**: `/health`
+
+3. **Set environment variables**:
+
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   PORT=8000
+   PYTHONUNBUFFERED=1
+   ```
+
+4. **Deploy**: Koyeb will automatically build and deploy your application
+
+#### Using Koyeb CLI
+
+```bash
+# Install Koyeb CLI
+curl -fsSL https://cli.koyeb.com/install.sh | bash
+
+# Login to Koyeb
+koyeb login
+
+# Deploy from current directory
+koyeb app init signgpt-crew-server \
+  --git https://github.com/your-username/SignGPT-Crew-Server \
+  --git-branch main \
+  --docker \
+  --ports 8000:http \
+  --env OPENAI_API_KEY=your_openai_api_key_here \
+  --env PORT=8000 \
+  --env PYTHONUNBUFFERED=1
+
+# Deploy the app
+koyeb app deploy signgpt-crew-server
+```
+
+#### Automatic Deployment Configuration
+
+The included `koyeb.yaml` file provides automatic deployment configuration:
+
+```yaml
+name: signgpt-crew-server
+type: web
+
+build:
+  dockerfile: Dockerfile
+
+run:
+  ports:
+    - port: 8000
+      protocol: http
+  health_check:
+    path: /health
+    port: 8000
+
+  env:
+    - name: OPENAI_API_KEY
+      secret: openai-api-key
+    - name: PORT
+      value: "8000"
+    - name: PYTHONUNBUFFERED
+      value: "1"
+
+instances:
+  min: 1
+  max: 3
+
+regions:
+  - fra # Frankfurt (Europe)
+```
+
+#### Post-Deployment
+
+After successful deployment:
+
+1. **Access your app**: `https://your-app-name-your-org.koyeb.app`
+2. **Check health**: `https://your-app-name-your-org.koyeb.app/health`
+3. **View API docs**: `https://your-app-name-your-org.koyeb.app/docs`
+
+#### Scaling and Monitoring
+
+- **Auto-scaling**: Koyeb automatically scales based on traffic
+- **Monitoring**: View logs and metrics in the Koyeb dashboard
+- **Custom domains**: Add your own domain in the Koyeb dashboard
 
 ### Using Production ASGI Server
 

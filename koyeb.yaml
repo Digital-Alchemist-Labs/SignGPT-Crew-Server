@@ -1,0 +1,41 @@
+# Koyeb deployment configuration
+# This file can be used for automatic deployment from Git repository
+
+name: signgpt-crew-server
+type: web
+
+# Build configuration
+build:
+  dockerfile: Dockerfile
+
+# Runtime configuration
+run:
+  ports:
+    - port: 8000
+      protocol: http
+
+  # Health check configuration
+  health_check:
+    path: /health
+    port: 8000
+
+  # Environment variables (set these in Koyeb dashboard)
+  env:
+    - name: OPENAI_API_KEY
+      # Set this in Koyeb dashboard as a secret
+      secret: openai-api-key
+    - name: PORT
+      value: "8000"
+    - name: PYTHONUNBUFFERED
+      value: "1"
+
+# Resource configuration
+instances:
+  min: 1
+  max: 3
+
+# Regions (choose based on your target audience)
+regions:
+  - fra # Frankfurt (Europe)
+  # - was  # Washington (US East)
+  # - sfo  # San Francisco (US West)
